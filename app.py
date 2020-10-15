@@ -10,11 +10,11 @@ from sqlalchemy import create_engine, func
 
 from flask import Flask, jsonify
 
-
 #################################################
 # Database Setup
 #################################################
 engine = create_engine("sqlite:///Resources/hawaii.sqlite")
+connect_args={'check_same_thread':False}
 
 # reflect an existing database into a new model
 Base = automap_base()
@@ -30,6 +30,9 @@ session = Session(engine)
 # For details on this, see: http://flask.pocoo.org/docs/0.12/quickstart/#a-minimal-application
 app = Flask(__name__)
 
+#variable for two date marks
+year_ago = dt.date(2017,8,23) - dt.timedelta(days=365)
+latest_date = dt.date(2017,8,23)
 
 # 3. Define what to do when a user hits the index route
 # These `@app.route` lines are called "decorators" and are used to define 
@@ -38,24 +41,73 @@ app = Flask(__name__)
 def Welcome():
     return "Welcome to Hawaii Weather API!"
 
-@app.route("/api/1.0/precipitation")
+@app.route("/api/v1.0/precipitation")
 def precipitation():
+
+    session = Session(engine)
+
     year_ago = dt.date(2017,8,23) - dt.timedelta(days=365)
     latest_date = dt.date(2017,8,23)
 
     prcp_scores = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_ago).filter(Measurement.date <= latest_date).all()
-    return jsonify(prcp_scores)
+    
+    session.close()
 
-#@app.route("/api/1.0/stations")
+    return jsonify(dict(prcp_scores))
 
-@app.route("/api/1.0/tobs")
+
+@app.route("/api/v1.0/stations")
+def stations():
+
+    session = Session(engine)
+
+    station_names = session.query(Measurement.station).group_by(Measurement.station).all()
+    
+    session.close()
+
+    station_results = list(np.ravel(station_names))
+
+    return jsonify(station_results)
+
+@app.route("/api/v1.0/tobs")
 def tobs():
-    most_active_st = session.query(Measurement.station,func.max(Measurement.tobs)).all()
-    return jsonify(most_active_st)
 
-#@app.route("/api/1.0/<start>")
-#@app.route("/api.1.0/<start>/<end>")
+    session = Session(engine)
 
+    year_ago = dt.date(2017,8,23) - dt.timedelta(days=365)
+    latest_date = dt.date(2017,8,23)
+
+    tobs_list = session.query(Measurement.date, Measurement.station, Measurement.tobs).filter(Measurement.date >= year_ago).filter(Measurement.date <= latest_date).all()
+    
+    session.close()
+
+    return jsonify(tobs_list)
+
+
+
+@app.route("/api/v1.0/start/<start>")
+def start(start):
+
+    session = Session(engine)
+
+    temps = session.query(func.max(Measurement.tobs),func.min(Measurement.tobs),func.avg(Measurement.tobs)).filter(Measurement.date >= start).all()
+    
+    session.close()
+
+    return jsonify(temps)
+
+@app.route("/api/v1.0/start_end/<start>/<end>")
+def start_end(start, end):
+
+    session = Session(engine)
+
+    end_temps = session.query(func.max(Measurement.tobs),func.min(Measurement.tobs),func.avg(Measurement.tobs)).filter(Measurement.date >= start).filter(Measurement.date <= end).all()
+    
+    session.close()
+
+    end_temps_list = list(np.ravel(end_temps))
+
+    return jsonify(end_temps_list)
 
 
 
