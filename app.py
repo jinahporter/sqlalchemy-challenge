@@ -39,11 +39,19 @@ latest_date = dt.date(2017,8,23)
 # the a response for a specific URL route.
 @app.route("/")
 def Welcome():
-    return "Welcome to Hawaii Weather API!"
+    #List all routes that are available
+    return (
+        f"Welcome to Hawaii Weather API!<br/><br/>"
+        f"Routes:<br/>"
+        f"/api/v1.0/precipitation<br/>"
+        f"/api/v1.0/stations<br/>"
+        f"/api/v1.0/tobs<br/>"
+        f"/api/v1.0/start/<start><br/>"
+        f"/api/v1.0/start_end/<start>/<end><br/>")
 
 @app.route("/api/v1.0/precipitation")
 def precipitation():
-
+    #Convert the query results to a dictionary using `date` as the key and `prcp` as the value
     session = Session(engine)
 
     year_ago = dt.date(2017,8,23) - dt.timedelta(days=365)
@@ -52,13 +60,13 @@ def precipitation():
     prcp_scores = session.query(Measurement.date, Measurement.prcp).filter(Measurement.date >= year_ago).filter(Measurement.date <= latest_date).all()
     
     session.close()
-
+    #Return the JSON representation of your dictionary
     return jsonify(dict(prcp_scores))
 
 
 @app.route("/api/v1.0/stations")
 def stations():
-
+    #Return a JSON list of stations from the dataset
     session = Session(engine)
 
     station_names = session.query(Measurement.station).group_by(Measurement.station).all()
@@ -71,7 +79,7 @@ def stations():
 
 @app.route("/api/v1.0/tobs")
 def tobs():
-
+    #Query the dates and temperature observations of the most active station for the last year of data.
     session = Session(engine)
 
     year_ago = dt.date(2017,8,23) - dt.timedelta(days=365)
@@ -80,10 +88,11 @@ def tobs():
     tobs_list = session.query(Measurement.date, Measurement.station, Measurement.tobs).filter(Measurement.date >= year_ago).filter(Measurement.date <= latest_date).all()
     
     session.close()
-
+    #Return a JSON list of temperature observations (TOBS) for the previous year.
     return jsonify(tobs_list)
 
 
+#Return a JSON list of the minimum temperature, the average temperature, and the max temperature for a given start or start-end range
 
 @app.route("/api/v1.0/start/<start>")
 def start(start):
